@@ -16,7 +16,7 @@ export default function AdminPage() {
 
   const cargarTalleres = async () => {
     const { data, error } = await supabase
-      .from('Usuarios')
+      .from('usuarios') // <-- Corregido a minúsculas
       .select('*')
       .order('id', { ascending: false })
 
@@ -35,7 +35,7 @@ export default function AdminPage() {
     const nuevaFechaStr = hoy.toISOString().split('T')[0]
 
     const { error } = await supabase
-      .from('Usuarios')
+      .from('usuarios') // <-- Corregido a minúsculas
       .update({ fecha_pago_limite: nuevaFechaStr, activo: true })
       .eq('id', id)
 
@@ -54,7 +54,7 @@ export default function AdminPage() {
     const fechaVencidaStr = ayer.toISOString().split('T')[0]
 
     const { error } = await supabase
-      .from('Usuarios')
+      .from('usuarios') // <-- Corregido a minúsculas
       .update({ fecha_pago_limite: fechaVencidaStr, activo: false })
       .eq('id', id)
 
