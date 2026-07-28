@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 
 export default function DashboardPage() {
-  // 1. ESTADOS DE SESIÓN Y FORMULARIOS (Equivalente a st.session_state)
+  // 1. ESTADOS DE SESIÓN Y FORMULARIOS
   const [isLogged, setIsLogged] = useState(false)
   const [user, setUser] = useState<{ id: number; nombre_taller: string } | null>(null)
   
@@ -18,7 +18,7 @@ export default function DashboardPage() {
   const [passReg, setPassReg] = useState('')
   const [showRegistro, setShowRegistro] = useState(false)
 
-  // Estados para las Métricas (Equivalente a st.cache_data)
+  // Estados para las Métricas
   const [metricas, setMetricas] = useState({
     activos: 0,
     cotizar: 0,
@@ -31,11 +31,8 @@ export default function DashboardPage() {
     e.preventDefault()
     if (!emailLogin || !passLogin) return alert("Completa todos los campos")
 
-    // Nota: En Supabase lo ideal es usar su propio sistema de Auth, 
-    // pero aquí replicamos tu lógica de tabla personalizada 'Usuarios'.
-    // En JS nativo no hasheamos aquí, asumiremos que comparas directo o usas Supabase Auth a futuro.
     const { data, error } = await supabase
-      .from('Usuarios')
+      .from('usuarios') // <-- Corregido a minúsculas
       .select('id, nombre_taller, password, fecha_pago_limite')
       .eq('email', emailLogin)
       .single()
@@ -44,8 +41,7 @@ export default function DashboardPage() {
       return alert("Credenciales incorrectas o usuario no encontrado.")
     }
 
-    // Aquí compararías el hash. Para el ejemplo, comparamos directo.
-    if (data.password === passLogin /* o tu lógica de hash */) {
+    if (data.password === passLogin) {
       const hoy = new Date()
       const fechaLimite = data.fecha_pago_limite ? new Date(data.fecha_pago_limite) : null
 
@@ -67,13 +63,13 @@ export default function DashboardPage() {
     if (!tallerReg || !duenoReg || !emailReg || !passReg) return alert("Completa todos los campos")
 
     const { error } = await supabase
-      .from('Usuarios')
+      .from('usuarios') // <-- Corregido a minúsculas
       .insert([
         {
           nombre_taller: tallerReg,
           nombre_dueno: duenoReg,
           email: emailReg,
-          password: passReg // Deberías encriptar esto o usar Supabase Auth
+          password: passReg
         }
       ])
 
@@ -85,29 +81,25 @@ export default function DashboardPage() {
     }
   }
 
-  // 4. FUNCIÓN PARA OBTENER MÉTRICAS (Traducción de tus consultas SQL)
+  // 4. FUNCIÓN PARA OBTENER MÉTRICAS
   const cargarMetricas = async (uid: number) => {
-    // Órdenes por Cotizar
     const { count: cotizarCount } = await supabase
       .from('Hojas_Trabajo')
       .select('*', { count: 'exact', head: true })
       .eq('usuario_id', uid)
       .eq('estado', 'Cotizar')
 
-    // Órdenes Activas
     const { count: ordenesCount } = await supabase
       .from('Hojas_Trabajo')
       .select('*', { count: 'exact', head: true })
       .eq('usuario_id', uid)
       .neq('estado', 'Facturado')
 
-    // Empresas Registradas
     const { count: empresasCount } = await supabase
       .from('Empresas_Clientes')
       .select('*', { count: 'exact', head: true })
       .eq('usuario_id', uid)
 
-    // Valor Activos (Equivalente al JOIN en SQL)
     const { data: detalles } = await supabase
       .from('Detalles_Orden')
       .select(`precio_venta, Hojas_Trabajo!inner(estado, usuario_id)`)
@@ -131,7 +123,7 @@ export default function DashboardPage() {
   // ================= RENDERIZADO DE LA INTERFAZ =================
   if (!isLogged) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center p-4">
+      <main className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
         <div className="text-center mb-8">
           <h1 className="font-extrabold text-5xl tracking-tight mb-2 text-gray-900">
             My<span className="text-red-500">Taller</span>
@@ -156,7 +148,6 @@ export default function DashboardPage() {
           </form>
         </div>
 
-        {/* Acordeón de Registro */}
         <div className="w-full max-w-md mt-4">
           <button onClick={() => setShowRegistro(!showRegistro)} className="w-full bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg hover:bg-gray-300 transition">
             {showRegistro ? 'Ocultar Registro' : 'Registrar Nuevo Taller'}
@@ -178,9 +169,8 @@ export default function DashboardPage() {
     )
   }
 
-  // VISTA DEL DASHBOARD
   return (
-    <main className="p-8 max-w-7xl mx-auto text-gray-800">
+    <main className="p-8 max-w-7xl mx-auto text-gray-800 bg-gray-50 min-h-screen">
       <div className="flex justify-between items-end mb-6 border-b border-gray-200 pb-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Panel Principal</h1>
@@ -191,7 +181,6 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {/* Métricas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Valor Trabajos Activos</p>
@@ -211,18 +200,17 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Secciones de Información */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <h3 className="text-xl font-bold text-gray-900 mb-2">Control Contable</h3>
-          <p className="text-gray-600">Desde este panel puedes supervisar de forma general el estado financiero de tus operaciones en curso. Utiliza los módulos laterales para gestionar la nómina, auditar precios o emitir facturas.</p>
+          <p className="text-gray-600">Desde este panel puedes supervisar de forma general el estado financiero de tus operaciones en curso.</p>
         </div>
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <h3 className="text-xl font-bold text-gray-900 mb-2">Accesos Rápidos</h3>
           <ul className="text-gray-600 space-y-2">
-            <li>• Dirígete a Expediente para auditar estados y cotizar pendientes.</li>
-            <li>• Consulta Nómina Mecánicos para calcular comisiones de personal.</li>
-            <li>• Gestiona tu cartera de clientes desde el Directorio.</li>
+            <li>• Gestiona tus órdenes y expedientes.</li>
+            <li>• Consulta la nómina y comisiones de personal.</li>
+            <li>• Administra el inventario de repuestos.</li>
           </ul>
         </div>
       </div>
